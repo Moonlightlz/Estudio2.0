@@ -1,86 +1,135 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Question as QuestionType } from '../types';
-import Question from './Question';
+import { Question } from '../types';
 import FeedbackModal from './FeedbackModal';
-import ProgressBar from './ProgressBar';
 
 interface QuizScreenProps {
-  question: QuestionType;
+  question: Question;
   onNextQuestion: (isCorrect: boolean) => void;
   questionNumber: number;
   totalQuestions: number;
+  onRestart: () => void;
+  onStop: () => void;
 }
 
-const QuizScreen: React.FC<QuizScreenProps> = ({ question, onNextQuestion, questionNumber, totalQuestions }) => {
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+const TIME_LIMIT = 20; // in seconds
+
+const QuizScreen: React.FC<QuizScreenProps> = ({ question, onNextQuestion, questionNumber, totalQuestions, onRestart, onStop }) => {
+  const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const resetState = useCallback(() => {
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setShowFeedback(false);
-    setTimeLeft(15);
-  }, []);
-  
-  useEffect(() => {
-    resetState();
-  }, [question, resetState]);
+  const handleNext = useCallback(() => {
+    if (isAnswered) {
+      const isCorrect = selectedOptionIndex === question.correctAnswerIndex;
+      onNextQuestion(isCorrect);
+      // Reset state for next question
+      setSelectedOptionIndex(null);
+      setIsAnswered(false);
+      setShowFeedback(false);
+      setTimeLeft(TIME_LIMIT);
+      setIsPaused(false);
+    }
+  }, [isAnswered, selectedOptionIndex, question.correctAnswerIndex, onNextQuestion]);
 
   useEffect(() => {
-    if (isAnswered) return;
-    if (timeLeft === 0) {
-      setIsAnswered(true);
-      setShowFeedback(true);
+    if (isPaused || isAnswered) {
       return;
     }
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsAnswered(true);
+          setShowFeedback(true);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
+
+    if (isAnswered) {
+      clearInterval(timer);
+    }
+
     return () => clearInterval(timer);
-  }, [timeLeft, isAnswered]);
+  }, [isAnswered, handleNext, isPaused]);
 
-  const handleAnswerSelect = (index: number) => {
-    if (isAnswered) return;
-    setIsAnswered(true);
-    setSelectedAnswer(index);
-    setShowFeedback(true);
-  };
-  
-  const handleNext = () => {
-    const isCorrect = selectedAnswer === question.correctAnswerIndex;
-    onNextQuestion(isCorrect);
+  const handleStopClick = () => {
+    setIsPaused(prev => !prev);
+    onStop(); // Llama a la función para mantener la prop, aunque esté vacía
   };
 
-  const isTimeUp = timeLeft === 0 && selectedAnswer === null;
-  const isCorrect = selectedAnswer === question.correctAnswerIndex;
+  const handleOptionClick = (index: number) => {
+    if (!isAnswered) {
+      setSelectedOptionIndex(index);
+      setIsAnswered(true);
+      setShowFeedback(true);
+    }
+  };
+
+  const getButtonClass = (index: number) => {
+    if (!isAnswered) {
+      return "bg-white hover:bg-cream";
+    }
+    if (index === question.correctAnswerIndex) {
+      return "bg-mint/50 border-mint-dark";
+    }
+    if (index === selectedOptionIndex) {
+      return "bg-red-300/50 border-red-500";
+    }
+    return "bg-white opacity-60";
+  };
+
+  const progressPercentage = (questionNumber / totalQuestions) * 100;
 
   return (
-    <div className="p-4 sm:p-8 bg-white rounded-2xl shadow-lg w-full animate-fade-in">
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-sm font-semibold text-brown/60">
-          Question {questionNumber} of {totalQuestions}
-        </span>
-        <div className="flex items-center gap-2 text-lg font-bold text-peach-dark">
-           <TimerIcon />
-           <span>{timeLeft}s</span>
+    <div className="w-full max-w-3xl p-4 sm:p-8 bg-white rounded-2xl shadow-lg animate-fade-in-up">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+        <div className="flex gap-2">
+            <button onClick={handleStopClick} className="text-sm bg-yellow-100 text-yellow-800 font-semibold py-1 px-3 rounded-full hover:bg-yellow-200 transition-colors w-20">
+              {isPaused ? 'Reanudar' : 'Detener'}
+            </button>
+            <button onClick={onRestart} className="text-sm bg-red-100 text-red-700 font-semibold py-1 px-3 rounded-full hover:bg-red-200 transition-colors">Reiniciar</button>
+        </div>
+        <div className="text-lg font-bold text-brown/60">
+          Pregunta <span className="text-peach-dark">{questionNumber}</span> / {totalQuestions}
         </div>
       </div>
-      <ProgressBar duration={15} timeLeft={timeLeft} isPaused={isAnswered} />
-      
-      <Question 
-        question={question}
-        onAnswerSelect={handleAnswerSelect}
-        selectedAnswer={selectedAnswer}
-        isAnswered={isAnswered}
-      />
-      
+
+      <div className="w-full bg-cream rounded-full h-2.5 mb-6">
+        <div className="bg-peach-light h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+      </div>
+
+      <div className="text-center mb-2">
+        <span className="text-sm font-semibold bg-mint/30 text-mint-dark px-3 py-1 rounded-full">{question.category}</span>
+      </div>
+
+      <h2 className="text-2xl md:text-3xl font-serif text-brown text-center mb-8">{question.question}</h2>
+
+      <div className="space-y-4">
+        {question.options.map((option, index) => (
+          <button
+            key={index}
+            onClick={() => handleOptionClick(index)}
+            disabled={isAnswered}
+            className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-300 text-brown font-medium text-lg ${getButtonClass(index)}`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-8 text-center">
+        <div className="text-5xl font-bold text-peach-dark">{timeLeft}</div>
+        <div className="text-sm text-brown/50">segundos restantes</div>
+      </div>
+
       {showFeedback && (
-        <FeedbackModal 
-          isCorrect={isCorrect}
-          isTimeUp={isTimeUp}
+        <FeedbackModal
+          isCorrect={selectedOptionIndex === question.correctAnswerIndex}
+          isTimeUp={timeLeft === 0 && selectedOptionIndex === null}
           explanation={question.explanation}
           correctAnswer={question.options[question.correctAnswerIndex]}
           onNext={handleNext}
@@ -89,12 +138,5 @@ const QuizScreen: React.FC<QuizScreenProps> = ({ question, onNextQuestion, quest
     </div>
   );
 };
-
-const TimerIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-
 
 export default QuizScreen;

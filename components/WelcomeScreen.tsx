@@ -8,9 +8,9 @@ interface WelcomeScreenProps {
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   return (
     <div className="text-center p-8 bg-white rounded-2xl shadow-lg animate-fade-in-up">
-      <h1 className="text-4xl md:text-5xl font-serif text-peach-dark mb-2">Project Knowledge Quiz</h1>
+      <h1 className="text-4xl md:text-5xl font-serif text-peach-dark mb-2">Proyecto de la Pastelería modo estudio activated</h1>
       <p className="text-brown/70 mb-8 text-lg">
-        Test your knowledge of the Pastelería D'Diego project.
+        ultimo final de verdad final 6.0.
       </p>
       <div className="mb-8">
         <span className="text-7xl">🧁</span>

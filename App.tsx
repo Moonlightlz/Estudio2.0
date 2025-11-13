@@ -6,15 +6,15 @@ import ResultsScreen from './components/ResultsScreen';
 import { GameState } from './types';
 import { quizData } from './data/quizData';
 
-// Shuffle questions array
-const shuffledQuestions = [...quizData].sort(() => Math.random() - 0.5);
-
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.Welcome);
   const [score, setScore] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [shuffledQuestions, setShuffledQuestions] = useState([...quizData]);
 
   const startQuiz = useCallback(() => {
+    // Baraja las preguntas cada vez que se inicia un nuevo quiz
+    setShuffledQuestions([...quizData].sort(() => Math.random() - 0.5));
     setScore(0);
     setCurrentQuestionIndex(0);
     setGameState(GameState.Quiz);
@@ -31,10 +31,14 @@ const App: React.FC = () => {
     }
   }, [currentQuestionIndex]);
 
-  const restartQuiz = useCallback(() => {
-    startQuiz();
-  }, [startQuiz]);
+  const stopQuiz = useCallback(() => {
+    // Esta función ahora está vacía porque la pausa se maneja dentro de QuizScreen.
+  }, []);
   
+  const restartQuiz = useCallback(() => {
+    setGameState(GameState.Welcome);
+  }, []);
+
   const renderScreen = () => {
     switch (gameState) {
       case GameState.Quiz:
@@ -44,6 +48,8 @@ const App: React.FC = () => {
             onNextQuestion={handleNextQuestion}
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={shuffledQuestions.length}
+            onRestart={restartQuiz}
+            onStop={stopQuiz}
           />
         );
       case GameState.Results:
@@ -66,7 +72,7 @@ const App: React.FC = () => {
         {renderScreen()}
       </main>
       <footer className="w-full text-center p-4 mt-8 text-brown/50 text-sm">
-        <p>Built with Gemini | Interactive Project Quiz</p>
+        <p>Sin miedo al éxito papaaaaa - Quiz de PAM</p>
       </footer>
     </div>
   );

@@ -8,19 +8,7 @@ interface FeedbackModalProps {
   onNext: () => void;
 }
 
-const FEEDBACK_DURATION = 10; // in seconds
-
 const FeedbackModal: React.FC<FeedbackModalProps> = ({ isCorrect, isTimeUp, explanation, correctAnswer, onNext }) => {
-
-  useEffect(() => {
-    const mainTimer = setTimeout(() => {
-      onNext();
-    }, FEEDBACK_DURATION * 1000);
-
-    return () => {
-      clearTimeout(mainTimer);
-    };
-  }, [onNext]);
   
   const title = isTimeUp ? "¡Se acabó el tiempo!" : isCorrect ? "¡Excelente, buen trabajo!" : "¡Respuesta incorrecta!";
   const titleColor = isCorrect ? "text-mint-dark" : "text-red-500";
