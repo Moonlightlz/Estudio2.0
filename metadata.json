@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Project Quiz",
+  "description": "An interactive quiz web application to test knowledge about a specific software project. The questions are dynamically generated based on the project's codebase, covering topics like architecture, versions, business logic, and UI implementation.",
+  "requestFramePermissions": []
+}
